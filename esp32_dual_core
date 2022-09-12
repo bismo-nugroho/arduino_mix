@@ -10,6 +10,19 @@ TaskHandle_t Task2;
 const int led1 = 22;
 const int led2 = 22;
 
+
+ #ifdef __cplusplus
+  extern "C" {
+ #endif
+
+  uint8_t temprature_sens_read();
+
+#ifdef __cplusplus
+}
+#endif
+
+uint8_t temprature_sens_read();
+
 void setup() {
   Serial.begin(9600); 
   pinMode(led1, OUTPUT);
@@ -50,6 +63,11 @@ void Task1code( void * pvParameters ){
       Serial.print("Task1 running on core ");
   Serial.println(xPortGetCoreID());
     digitalWrite(led1, HIGH);
+
+  // Convert raw temperature in F to Celsius degrees
+  Serial.print("temp: ");
+  Serial.print((temprature_sens_read() - 32) / 1.8);
+  Serial.println(" C");
     delay(1000);
     digitalWrite(led1, LOW);
     delay(1000);
