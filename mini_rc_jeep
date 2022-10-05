@@ -1,0 +1,111 @@
+// Pin number --> LED 13/ servo 5/ motor 4,15
+// Range --> motor 1000~2000 / Servo 60~120 degree
+
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <Servo.h>
+                                                                                                                                                             
+#define motor_d1 4
+#define motor_d2 15
+#define led_lighting 13
+#define servo_streeing 5
+
+const char *ssid = "3dfuns_jeep";
+const char *pw = "";   
+IPAddress ip(192, 168, 0, 1);
+IPAddress netmask(255, 255, 255, 0);
+const int port = 9876;
+
+int led_state;
+int motor_speed = 0;
+int servo_angle = 0;
+int val_motor;
+
+char cmd[100];
+int cmdIndex = 0;
+
+WiFiServer server(port);
+WiFiClient client;
+
+Servo handle;
+
+void setup() {
+    pinMode(motor_d1, OUTPUT);
+    pinMode(motor_d2, OUTPUT);
+    pinMode(led_lighting, OUTPUT);
+
+    analogWrite(motor_d1, 0);
+    analogWrite(motor_d2, 0);
+
+    handle.attach(servo_streeing);
+
+    WiFi.softAPConfig(ip, ip, netmask);
+    WiFi.softAP(ssid, pw);
+
+    server.begin();
+    Serial.begin(115200);
+}
+
+boolean cmdStartsWith(const char *st) {
+    for (int i = 0;; i++) {
+        if (st[i] == 0) return true;
+        if (cmd[i] == 0) return false;
+        if (cmd[i] != st[i]) return false;
+    }
+    return false;
+}
+
+void exeCmd() {
+
+    if(cmdStartsWith("th") ) {
+    motor_speed = atoi(cmd+3);
+    }
+
+    if(motor_speed>1500) {  
+       val_motor = map(motor_speed, 1500, 2000, 0, 1023);       
+       analogWrite(motor_d2, val_motor);
+    }
+    if(motor_speed<1500) {  
+       val_motor = map(motor_speed, 1500, 1000, 0, 1023);       
+       analogWrite(motor_d1, val_motor);
+    }
+    if(motor_speed == 1500 ) {
+      analogWrite(motor_d1, 0);
+      analogWrite(motor_d2, 0);
+    }
+
+    if (cmdStartsWith("st") ) {
+    servo_angle = atoi(cmd+3);
+    handle.write(servo_angle);
+    }
+
+    if (cmdStartsWith("w")) {
+        led_state = (led_state == LOW) ? HIGH : LOW;
+        if(led_state == HIGH) {
+          digitalWrite(led_lighting, HIGH);
+        } else{
+          digitalWrite(led_lighting, LOW); 
+        }
+    }
+}
+
+void loop() {
+    if (!client.connected()) {
+        client = server.available();
+        return;
+    }
+
+    if (client.available()) {
+        char c = (char)client.read();
+
+        if (c == '\n') {
+            cmd[cmdIndex] = 0;
+            exeCmd();
+            cmdIndex = 0;
+        } else {
+            cmd[cmdIndex] = c;
+            if (cmdIndex < 99) cmdIndex++;
+        }
+    }
+}
+[출처] MINI RC_JEEP_Coding|작성자 3D FUNS
